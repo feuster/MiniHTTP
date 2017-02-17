@@ -1,4 +1,7 @@
-MiniHTTP is a minimal HTTP server for the local LAN. To compile the binary with Lazarus/FPC an actual Indy 10 package must be installed!
+MiniHTTP is a minimal HTTP server for the local LAN.
+The server can also execute remote command scripts (Batch based) on the host machine via URL call.
+
 The sourcecode is released under the General Public License Version 2.
+To compile the binary with Lazarus/FPC an actual Indy 10 package must be installed!
 
 http://www.gnu.org/licenses/gpl-2.0

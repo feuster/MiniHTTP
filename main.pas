@@ -5,15 +5,17 @@ unit main;
 interface
 
 uses
-  Classes, SysUtils, StrUtils, FileUtil, FileCtrl, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  Spin, ExtCtrls, IdStack, IdSocketHandle, IdHTTPServer, LCLType, Windows,
-  IdCustomHTTPServer, IdContext, IdGlobal, IniFiles;
+  Classes, SysUtils, StrUtils, FileUtil, FileCtrl, Forms, Controls, Graphics,
+  Dialogs, StdCtrls, Spin, ExtCtrls, IdStack, IdSocketHandle, IdHTTPServer,
+  LCLType, AsyncProcess, Windows, IdCustomHTTPServer, IdContext, IdGlobal,
+  IniFiles;
 
 type
 
   { TForm1 }
 
   TForm1 = class(TForm)
+    AsyncProcess1: TAsyncProcess;
     Button1: TButton;
     Button2: TButton;
     CheckBox1: TCheckBox;
@@ -49,8 +51,7 @@ type
     procedure Memo1MouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure Memo1MouseEnter(Sender: TObject);
     procedure Memo1MouseLeave(Sender: TObject);
-    procedure Memo1MouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer
-      );
+    procedure Memo1MouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     procedure Memo1MouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
     procedure Memo1UTF8KeyPress(Sender: TObject; var UTF8Key: TUTF8Char);
   private
@@ -69,11 +70,12 @@ type
 var
   Form1: TForm1;
   ApplicationVersionStr: String;
+  RcmdBuffer: String;
   Binding: TIdSocketHandle;
 
 const
-  STR_Copyright:      String = '© 2013 Alexander Feuster (alexander.feuster@gmail.com)'+#13#10+'http://github.com/feuster/MiniHTTP/';
-  STR_Copyright_HTML: String = '&copy; 2013 Alexander Feuster';
+  STR_Copyright:      String = '© 2017 Alexander Feuster (alexander.feuster@gmail.com)'+#13#10+'http://github.com/feuster/MiniHTTP/';
+  STR_Copyright_HTML: String = '&copy; 2013-2017 Alexander Feuster';
   STR_Server_starten: String = 'Server starten';
   STR_Server_stoppen: String = 'Server stoppen';
   BASE64_Folder_Icon: String = '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAN1wAADdcBQiibeAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAHCSURBVDiNpZAxa5NRFIafc+9XLCni4BC6FBycMnbrLpkcgtDVX6C70D/g4lZX/4coxLlgxFkpiiSSUGm/JiXfveee45AmNlhawXc53HvPee55X+l2u/yPqt3d3Tfu/viatwt3fzIYDI5uBJhZr9fr3TMzzAx3B+D09PR+v98/7HQ6z5fNOWdCCGU4HH6s67oAVDlnV1UmkwmllBUkhMD29nYHeLuEAkyn06qU8qqu64MrgIyqYmZrkHa73drc3KTVahFjJITAaDRiPB4/XFlQVVMtHH5IzJo/P4EA4MyB+erWPQB7++zs7ccYvlU5Z08pMW2cl88eIXLZeDUpXzsBkNQ5eP1+p0opmaoCTgzw6fjs6gLLsp58FB60t0DcK1Ul54yIEIMQ43Uj68pquDmCeJVztpwzuBNE2LgBoMVpslHMCUEAFgDVxQbzVAiA+aK5uGPmmDtZF3VpoUm2ArhqQaRiUjcMf81p1G60UEVhcjZfAFTVUkrgkS+jc06mDX9nvq4YhJ9nlxZExMwMEaHJRutOdWuIIsJFUoBSuTvHJ4YIfP46unV4qdlsjsBRZRtb/XfHd5+C8+P7+J8BIoxFwovfRxYhnhxjpzEAAAAASUVORK5CYII=" border="0"/>';
@@ -277,7 +279,10 @@ begin
     end;
   finally
   if Form1.IdHTTPServer1.Active=true then
-    Print('Server mit IP '+Binding.IP+':'+IntToStr(Binding.Port)+' gestartet')
+    begin
+      Print('Server mit IP '+Binding.IP+':'+IntToStr(Binding.Port)+' gestartet');
+      Print('Eine Kurzhilfe kann im Browser über die URL "http://'+Binding.IP+':'+IntToStr(Binding.Port)+'/help.rcmd" aufgerufen werden');
+    end
   else
     Print('Server nicht gestartet!');
   result:=Form1.IdHTTPServer1.Active;
@@ -449,12 +454,134 @@ var
   Stream: TMemoryStream;
   FileList: TStringList;
   Counter: Integer;
+  TimeStart: DWord;
+  TimeEnd: DWord;
+  RedirectHTML: Boolean;
 
 begin
   try
   Print('');
   GetFile:=RightStr(ARequestInfo.Document, Length(ARequestInfo.Document)-1);
   GetFile:=StringReplace(GetFile,'/','\',[rfReplaceAll, rfIgnoreCase]);
+
+  //Remote Befehle ausführen
+  if (AnsiRightStr(LowerCase(GetFile),5)='.rcmd') then
+    begin
+      Print('Remote Befehl "'+StringReplace(GetFile,'\','/',[rfReplaceAll, rfIgnoreCase])+'" angefordert von IP '+ARequestInfo.RemoteIP);
+      Print('User Agent: '+ARequestInfo.UserAgent);
+      AResponseInfo.RawHeaders.Clear;
+      AResponseInfo.RawHeaders.Add('Cache-Control: no-store, no-cache, must-revalidate');
+      AResponseInfo.RawHeaders.Add('Cache-Control: post-check=0, pre-check=0');
+      AResponseInfo.RawHeaders.Add('Pragma: no-cache');
+      AResponseInfo.Clear;
+      AResponseInfo.ContentType:='text/html';
+      if (FileExists(ExtractFilePath(Application.ExeName)+GetFile)) or (FileExists(Edit1.Text+GetFile)) then
+        begin
+          //200 Header für vorhandenen Remote Befehl
+          AResponseInfo.ContentText:='<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd"><html><title>Remote Command Status Status</title>';
+          AResponseInfo.ContentText:=AResponseInfo.ContentText+'<style type="text/css">body { background-color:#FFFFFF; font-family:monospace,verdana,arial; } a:link { text-decoration:none; font-weight:normal; color:#0000FF;} a:visited { text-decoration:none; font-weight:normal; color:#0080FF;} a:hover { text-decoration:underline; font-weight:bold; color:#004080; } a:active { text-decoration:none; font-weight:normal; color:#0000FF; } a:focus { text-decoration:none; font-weight:normal; color:#0000FF; }</style><body>';
+          AResponseInfo.ResponseNo:=200;
+          AResponseInfo.ResponseText:='200 OK';
+          AResponseInfo.ContentText:=AResponseInfo.ContentText+'<font color="black" size=+3><table border="0"><tr><td>'+BASE64_HTTP_Icon+'</td><td><b>&nbsp;Remote Command Status</b></td></tr></table><font size=+1><br>';
+          if FileExists(ExtractFilePath(Application.ExeName)+GetFile) then
+            begin
+             LocalFile:=ExtractFilePath(Application.ExeName)+GetFile;
+             AResponseInfo.ContentText:=AResponseInfo.ContentText+'Remote command file "'+GetFile+'" found in application folder<br><br>';
+            end;
+          if LocalFile='' then
+            begin
+              if (FileExists(Edit1.Text+GetFile)) then
+                begin
+                 LocalFile:=Edit1.Text+GetFile;
+                 AResponseInfo.ContentText:=AResponseInfo.ContentText+'Remote command file "'+GetFile+'" found in application folder<br><br>';
+                end;
+            end;
+          if FileExists(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat'))) then
+            DeleteFile(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')));
+          if CopyFile(PChar(LocalFile), PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')), true) then
+            begin
+              Stream:=TMemoryStream.Create;
+              Stream.LoadFromFile(LocalFile);
+              if Stream.Size>0 then
+                begin
+                  FileList:=TStringList.Create;
+                  FileList.Clear;
+                  FileList.LoadFromFile(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')));
+                  //Remote Befehlsausgabe als HTML Seite Option auswerten
+                  if UpperCase(FileList.Strings[0])='::HTMLOUTPUT::' then
+                    begin
+                      RedirectHTML:=true;
+                      AsyncProcess1.CommandLine:=PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')+' > '+ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')+'.txt 2>&1');
+                    end
+                  else
+                    begin
+                      RedirectHTML:=false;
+                      AsyncProcess1.CommandLine:=PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat'));
+                    end;
+                  FileList.Free;
+                  AsyncProcess1.ConsoleTitle:=Application.Title+' Server V'+ApplicationVersion;
+                  TimeStart:=GetTickCount;
+                  AsyncProcess1.Execute;
+                  while AsyncProcess1.Running do
+                    begin
+                      Application.ProcessMessages;
+                    end;
+                  if RedirectHTML=false then
+                    begin
+                      TimeEnd:=GetTickCount-TimeStart;
+                      AResponseInfo.ContentText:=AResponseInfo.ContentText+'Remote command execution took '+IntToStr(TimeEnd)+' ms<br><br>';
+                      AResponseInfo.ContentText:=AResponseInfo.ContentText+'Remote command exit code '+IntToStr(AsyncProcess1.ExitCode)+' and exit status '+IntToStr(AsyncProcess1.ExitStatus)+'<br><br>';
+                      AResponseInfo.ContentText:=AResponseInfo.ContentText+'<br><br><br><font size=-1>Info page generated at '+TimeToStr(Time)+'<br>by <a href="http://github.com/feuster/MiniHTTP/">'+Application.Title+' V'+ApplicationVersion+'</a> '+STR_Copyright_HTML+'<br><br></body></html>';
+                    end
+                  else
+                    begin
+                      AResponseInfo.ContentText:='';
+                      FileList:=TStringList.Create;
+                      FileList.Clear;
+                      FileList.LoadFromFile(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')+'.txt'));
+                      for Counter:=0 to FileList.Count-1 do
+                        begin
+                          AResponseInfo.ContentText:=AResponseInfo.ContentText+FileList.Strings[Counter];
+                        end;
+                      FileList.Free;
+                    end;
+                  Print('Remote Befehl Ausführung benötigte '+IntToStr(TimeEnd)+' ms');
+                  Print('Remote Befehl exit code '+IntToStr(AsyncProcess1.ExitCode)+' und exit status '+IntToStr(AsyncProcess1.ExitStatus));
+                end
+              else
+                begin
+                  AResponseInfo.ContentText:=AResponseInfo.ContentText+'Remote command not executed due to empty "'+GetFile+'" file<br><br>';
+                  AResponseInfo.ContentText:=AResponseInfo.ContentText+'<br><br><br><font size=-1>Info page generated at '+TimeToStr(Time)+'<br>by <a href="http://github.com/feuster/MiniHTTP/">'+Application.Title+' V'+ApplicationVersion+'</a> '+STR_Copyright_HTML+'<br><br></body></html>';
+                  Print('Remote Befehlsdatei enthält keine Befehle (0 Byte Größe)');
+                end;
+              Stream.Free;
+            end;
+          AResponseInfo.ServerSoftware:=Application.Title+' Server V'+ApplicationVersion;
+          //Tempdateien aufräumen
+          if FileExists(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat'))) then
+            DeleteFile(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')));
+          if FileExists(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')+'.txt')) then
+            DeleteFile(PChar(ChangeFileExt(GetTempDir+ExtractFilename(LocalFile),'.bat')+'.txt'));
+        end
+      else
+        begin
+          //404 Header für nicht vorhandenen Remote Befehl
+          AResponseInfo.ContentText:='<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/transitional.dtd"><html><title>Remote Command Error</title>';
+          AResponseInfo.ContentText:=AResponseInfo.ContentText+'<style type="text/css">body { background-color:#FFFFFF; font-family:monospace,verdana,arial; } a:link { text-decoration:none; font-weight:normal; color:#0000FF;} a:visited { text-decoration:none; font-weight:normal; color:#0080FF;} a:hover { text-decoration:underline; font-weight:bold; color:#004080; } a:active { text-decoration:none; font-weight:normal; color:#0000FF; } a:focus { text-decoration:none; font-weight:normal; color:#0000FF; }</style><body>';
+          AResponseInfo.ResponseNo:=404;
+          AResponseInfo.ResponseText:='404 Not found';
+          AResponseInfo.ContentText:=AResponseInfo.ContentText+'<font color="black" size=+3><table border="0"><tr><td>'+BASE64_HTTP_Icon+'</td><td><b>&nbsp;Remote Command Error</b></td></tr></table><font size=+1><br>';
+          AResponseInfo.ContentText:=AResponseInfo.ContentText+'Remote command file "'+GetFile+'" not found in application folder or server content folder<br><br>';
+          AResponseInfo.ContentText:=AResponseInfo.ContentText+'<br><br><br><font size=-1>Error page generated at '+TimeToStr(Time)+'<br>by <a href="http://github.com/feuster/MiniHTTP/">'+Application.Title+' V'+ApplicationVersion+'</a> '+STR_Copyright_HTML+'<br><br></body></html>';
+          AResponseInfo.ServerSoftware:=Application.Title+' Server V'+ApplicationVersion;
+          Print('Remote Datei "'+GetFile+'" weder im Applikationsordner noch im Serverordner gefunden');
+        end;
+      AResponseInfo.Server:=ComboBox1.Text;
+      AResponseInfo.WriteHeader;
+      AResponseInfo.WriteContent;
+      exit;
+    end;
+
   if (Length(GetFile)<>0) and (RightStr(GetFile,1)<>'\') then
     begin
       Print('Datei "'+StringReplace(GetFile,'\','/',[rfReplaceAll, rfIgnoreCase])+'" angefordert von IP '+ARequestInfo.RemoteIP);
@@ -499,7 +626,7 @@ begin
     begin
       if (Length(GetFile)<>0) then
         begin
-          if RightStr(GetFile,1)<>'\' then
+          if (RightStr(GetFile,1)<>'\') then
             Print('Datei "'+StringReplace(Edit1.Text+GetFile,'/','\',[rfReplaceAll, rfIgnoreCase])+'" ist nicht vorhanden')
           else
             begin
@@ -591,6 +718,7 @@ begin
       AResponseInfo.WriteHeader;
       AResponseInfo.WriteContent;
     end;
+
   except
     on E:Exception do
     begin

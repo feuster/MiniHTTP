@@ -1,0 +1,13 @@
+@echo off
+rem ***************************************************
+rem Remote command demo file for MiniHTTP
+rem ***************************************************
+echo Shutdown command
+echo.
+echo To cancel the shutdown 
+echo press [CTRL+C]
+echo on the server machine.
+echo.
+timeout /t 10
+shutdown -s -t 60
+exit

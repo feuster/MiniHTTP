@@ -10,7 +10,7 @@ object Form1: TForm1
   OnCreate = FormCreate
   OnResize = FormResize
   Position = poScreenCenter
-  LCLVersion = '1.0.14.0'
+  LCLVersion = '1.6.2.0'
   object Memo1: TMemo
     Left = 20
     Height = 90
@@ -167,6 +167,23 @@ object Form1: TForm1
   object SelectDirectoryDialog1: TSelectDirectoryDialog
     Options = [ofPathMustExist, ofCreatePrompt, ofEnableSizing, ofViewDetail]
     left = 80
+    top = 36
+  end
+  object AsyncProcess1: TAsyncProcess
+    PipeBufferSize = 2048
+    Active = False
+    Options = [poWaitOnExit]
+    Priority = ppNormal
+    StartupOptions = []
+    ShowWindow = swoShowDefault
+    WindowColumns = 0
+    WindowHeight = 0
+    WindowLeft = 0
+    WindowRows = 0
+    WindowTop = 0
+    WindowWidth = 0
+    FillAttribute = 0
+    left = 108
     top = 36
   end
 end

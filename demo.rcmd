@@ -1,0 +1,20 @@
+@echo off
+rem ***************************************************
+rem Remote command demo file for MiniHTTP
+rem ***************************************************
+echo Remote command demo
+echo.
+echo Remote commands are stored as *.rcmd files
+echo within the application or server folder.
+echo If a *.rcmd file is available in both folders
+echo the file in server folder will be used.
+echo.
+echo Remote command files are regular (DOS) batch
+echo text files which are renamed from .bat to .rcmd
+echo to prevent collision when downloading regular
+echo batch files from the HTTP server.
+echo.
+echo To execute a remote command call the server URL
+echo with the .rcmd file name.
+echo.
+timeout /t 15

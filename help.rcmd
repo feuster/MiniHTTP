@@ -1,0 +1,45 @@
+::HTMLOUTPUT::
+@echo off
+echo ^<html^>^<body^>
+echo ^<font face="monospace" size=+3^>
+echo ^<b^>^<u^>Kurzhilfe^</u^>^</b^>^<br^>
+echo ^<br^>
+echo ^<font face="monospace" size=+2^>
+echo ^<b^>^<u^>Einleitung^</u^>^</b^>^<br^>
+echo ^<font face="monospace" size=+1^>
+echo Es ist m^&ouml;glich, serverseitige Remote Befehle durchzuf^&uuml;hren.^<br^>
+echo Hierzu ben^&ouml;tigt man .rcmd Skripte, die man in den MiniHTTP Ordner oder in den Webinhalt Ordner kopiert.^<br^>
+echo ^<br^>
+echo ^<font face="monospace" size=+2^>
+echo ^<b^>^<u^>Skriptsprache^</u^>^</b^>^<br^>
+echo ^<font face="monospace" size=+1^>
+echo Als Skriptsprache dient der Befehlssatz der regul^&auml;ren Windows Batch Programmierung (https://de.wikipedia.org/wiki/BAT-Datei).^<br^>
+echo Soll MiniHTTP die Konsolen Ausgabe der Skripte als Ergebnis im Browser anzeigen, so muss das Skript als erste Zeile folgenden Befehl eingetragen haben:^<br^>
+echo ^<br^>^&nbsp;^&nbsp;^&nbsp;^<b^>::HTMLOUTPUT::^</b^>^<br^>
+echo ^<br^>
+echo Ist diese Befehlszeile nicht vorhanden, wird MiniHTTP auf dem Server PC ein lokales Konsolenfenster ^&ouml;ffnen und es erfolgt keine Ausgabe im Browser.^<br^>
+echo ^<br^>
+echo ^<font face="monospace" size=+2^>
+echo ^<b^>^<u^>Skript Tipps^</u^>^</b^>^<br^>
+echo ^<font face="monospace" size=+1^>
+echo Die Skriptausgabe k^&ouml;nnen auch HTML konform sein, allerdings m^&uuml;ssen dann einige Steuerzeichen maskiert werden.^<br^>
+echo Die Maskierung erfolgt ^&uuml;ber das ESCAPE ^^^ Zeichen.^<br^>
+echo Maskiert werden m^&uuml;ssen z.B. ^<,^> und ^& (Die ^& Maskierung gilt auch f^&uuml;r HTML Entities).^<br^>
+echo ^<br^>
+echo ^<font face="monospace" size=+2^>
+echo ^<b^>^<u^>Skript Aufruf^</u^>^</b^>^<br^>
+echo ^<font face="monospace" size=+1^>
+echo Ein Remote Befehlsskript wird im Browser ^&uuml;ber die eingestellte MiniHTTP Server IP Adresse + den Dateinamen des Skriptes aufgerufen, z.B.:^<br^>
+echo ^<br^>^&nbsp;^&nbsp;^&nbsp;^<b^>http://127.0.0.1/help.rcmd^</b^>^<br^>
+echo ^<br^>
+echo ^<font face="monospace" size=+2^>
+echo ^<b^>^<u^>Beispiel Skripte^</u^>^</b^>^<br^>
+echo ^<font face="monospace" size=+1^>
+echo Im MiniHTTP Ordner befinden sich einige Beispielskripte:^<br^>
+echo ^<br^>^&nbsp;^&nbsp;^&nbsp;^<b^>help.rcmd^</b^> (diese Hilfe Seite hier als Browser Ausgabe)^<br^>
+echo ^<br^>^&nbsp;^&nbsp;^&nbsp;^<b^>demo.rcmd^</b^> (Demoskript mit lokaler Konsole ohne Browser Ausgabe)^<br^>
+echo ^<br^>^&nbsp;^&nbsp;^&nbsp;^<b^>shutdown.rcmd^</b^> (Shutdown Befehl f^&uuml;r den Server)^<br^>
+echo ^<br^>
+echo ^<br^>^<br^>^<br^>
+echo ^<b^>^<i^>(c) 2017 Alexander Feuster (alexander.feuster@gmail.com)^</i^>^</b^>
+echo ^</body^>^</html^>
