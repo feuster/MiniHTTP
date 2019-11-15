@@ -74,8 +74,9 @@ var
   Binding: TIdSocketHandle;
 
 const
-  STR_Copyright:      String = '© 2017 Alexander Feuster (alexander.feuster@gmail.com)'+#13#10+'http://github.com/feuster/MiniHTTP/';
-  STR_Copyright_HTML: String = '&copy; 2013-2017 Alexander Feuster';
+  STR_Copyright:      String = '© 2019 Alexander Feuster (alexander.feuster@gmail.com)'+#13#10+'http://github.com/feuster/MiniHTTP/';
+  STR_Copyright_HTML: String = '&copy; 2013-2019 Alexander Feuster';
+  STR_CPU:            String = {$I %FPCTARGETCPU%};
   STR_Server_starten: String = 'Server starten';
   STR_Server_stoppen: String = 'Server stoppen';
   BASE64_Folder_Icon: String = '<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAN1wAADdcBQiibeAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAHCSURBVDiNpZAxa5NRFIafc+9XLCni4BC6FBycMnbrLpkcgtDVX6C70D/g4lZX/4coxLlgxFkpiiSSUGm/JiXfveee45AmNlhawXc53HvPee55X+l2u/yPqt3d3Tfu/viatwt3fzIYDI5uBJhZr9fr3TMzzAx3B+D09PR+v98/7HQ6z5fNOWdCCGU4HH6s67oAVDlnV1UmkwmllBUkhMD29nYHeLuEAkyn06qU8qqu64MrgIyqYmZrkHa73drc3KTVahFjJITAaDRiPB4/XFlQVVMtHH5IzJo/P4EA4MyB+erWPQB7++zs7ccYvlU5Z08pMW2cl88eIXLZeDUpXzsBkNQ5eP1+p0opmaoCTgzw6fjs6gLLsp58FB60t0DcK1Ul54yIEIMQ43Uj68pquDmCeJVztpwzuBNE2LgBoMVpslHMCUEAFgDVxQbzVAiA+aK5uGPmmDtZF3VpoUm2ArhqQaRiUjcMf81p1G60UEVhcjZfAFTVUkrgkS+jc06mDX9nvq4YhJ9nlxZExMwMEaHJRutOdWuIIsJFUoBSuTvHJ4YIfP46unV4qdlsjsBRZRtb/XfHd5+C8+P7+J8BIoxFwovfRxYhnhxjpzEAAAAASUVORK5CYII=" border="0"/>';
@@ -281,7 +282,8 @@ begin
   if Form1.IdHTTPServer1.Active=true then
     begin
       Print('Server mit IP '+Binding.IP+':'+IntToStr(Binding.Port)+' gestartet');
-      Print('Eine Kurzhilfe kann im Browser über die URL "http://'+Binding.IP+':'+IntToStr(Binding.Port)+'/help.rcmd" aufgerufen werden');
+      if FileExists(ExtractFilePath(Application.ExeName)+'help.rcmd')=true then
+        Print('Eine Kurzhilfe kann im Browser über die URL "http://'+Binding.IP+':'+IntToStr(Binding.Port)+'/help.rcmd" aufgerufen werden');
     end
   else
     Print('Server nicht gestartet!');
@@ -350,7 +352,14 @@ begin
   //Dateipfad ggfs. korrigieren
   CorrectFilesFolderPath;
 
-  Print(Form1.Caption+' '+STR_Copyright);
+  //Copyright- und Versionsinfo anzeigen
+  if LowerCase(STR_CPU)='x86_64' then
+    Print(Form1.Caption+' (64Bit) '+STR_Copyright)
+  else if LowerCase(STR_CPU)='i386' then
+    Print(Form1.Caption+' (32Bit) '+STR_Copyright)
+  else
+    Print(Form1.Caption+' ('+STR_CPU+') '+STR_Copyright);
+
   except
     on E:Exception do
     begin
